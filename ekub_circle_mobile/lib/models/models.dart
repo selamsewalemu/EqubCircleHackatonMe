@@ -308,16 +308,25 @@ class DashboardNextCircle {
 }
 
 class DashboardSummary {
+  final int activeCircles;
+  final double totalContributions;
+  final double totalPayoutsReceived;
   final DashboardNextCircle? nextPaymentCircle;
   final DashboardNextCircle? nextPayoutCircle;
 
   DashboardSummary({
+    this.activeCircles = 0,
+    this.totalContributions = 0,
+    this.totalPayoutsReceived = 0,
     this.nextPaymentCircle,
     this.nextPayoutCircle,
   });
 
   factory DashboardSummary.fromJson(Map<String, dynamic> json) {
     return DashboardSummary(
+      activeCircles: json['activeCircles'] ?? 0,
+      totalContributions: (json['totalContributions'] as num?)?.toDouble() ?? 0.0,
+      totalPayoutsReceived: (json['totalPayoutsReceived'] as num?)?.toDouble() ?? 0.0,
       nextPaymentCircle: json['nextPaymentCircle'] != null
           ? DashboardNextCircle.fromJson(json['nextPaymentCircle'] as Map<String, dynamic>)
           : null,

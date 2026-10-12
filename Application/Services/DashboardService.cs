@@ -18,6 +18,17 @@ public class DashboardService(IApplicationDbContext db) : IDashboardService
             .OrderBy(m => m.Circle.CreatedAt)
             .ToListAsync();
 
+        // Aggregate metrics across all of the user's active memberships
+        var membershipIds = memberships.Select(m => m.Id).ToList();
+
+        var totalContributions = await db.Payments
+            .Where(p => membershipIds.Contains(p.MembershipId))
+            .SumAsync(p => (decimal?)p.Amount) ?? 0m;
+
+        var totalPayoutsReceived = await db.Payouts
+            .Where(p => membershipIds.Contains(p.ReceiverMembershipId) && p.Status == PayoutStatus.Completed)
+            .SumAsync(p => (decimal?)p.Amount) ?? 0m;
+
         DashboardNextCircleDto? nextPayment = null;
         DashboardNextCircleDto? nextPayout = null;
 
@@ -57,6 +68,6 @@ public class DashboardService(IApplicationDbContext db) : IDashboardService
             }
         }
 
-        return new DashboardSummaryDto(nextPayment, nextPayout);
+        return new DashboardSummaryDto(memberships.Count, totalContributions, totalPayoutsReceived, nextPayment, nextPayout);
     }
 }

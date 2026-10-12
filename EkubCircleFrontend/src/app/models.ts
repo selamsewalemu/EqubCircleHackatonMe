@@ -13,4 +13,4 @@ export interface PayoutResponse { roundId: number; roundNumber: number; receiver
 export interface ApiError { message?: string; title?: string; errors?: Record<string, string[]>; }
 
 export interface DashboardNextCircle { circleId: number; circleName: string; contributionAmount: number; frequency: string; roundNumber: number; receiverName: string; ready: boolean; status: string; message: string; }
-export interface DashboardSummary { nextPaymentCircle?: DashboardNextCircle | null; nextPayoutCircle?: DashboardNextCircle | null; }
+export interface DashboardSummary { activeCircles: number; totalContributions: number; totalPayoutsReceived: number; nextPaymentCircle?: DashboardNextCircle | null; nextPayoutCircle?: DashboardNextCircle | null; }

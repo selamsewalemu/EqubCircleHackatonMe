@@ -12,5 +12,8 @@ public record DashboardNextCircleDto(
     string Message);
 
 public record DashboardSummaryDto(
+    int ActiveCircles,
+    decimal TotalContributions,
+    decimal TotalPayoutsReceived,
     DashboardNextCircleDto? NextPaymentCircle,
     DashboardNextCircleDto? NextPayoutCircle);

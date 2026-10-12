@@ -12,8 +12,12 @@ public class CircleService(IApplicationDbContext db) : ICircleService
     {
         if (request.ContributionAmount <= 0) throw new InvalidOperationException("Contribution must be greater than zero.");
         if (request.MemberLimit < 2) throw new InvalidOperationException("A circle must have at least 2 members.");
-        if (request.Frequency is not ("Weekly" or "Monthly")) throw new InvalidOperationException("Frequency must be Weekly or Monthly.");
         if (string.IsNullOrWhiteSpace(request.Name)) throw new InvalidOperationException("Circle name is required.");
+
+        var normalizedFrequency = request.Frequency?.Trim();
+        if (string.IsNullOrWhiteSpace(normalizedFrequency) || !Enum.TryParse<Frequency>(normalizedFrequency, true, out var frequency) ||
+            (frequency != Frequency.Weekly && frequency != Frequency.Monthly))
+            throw new InvalidOperationException("Frequency must be Weekly or Monthly.");
 
         var organizer = await db.Users.FindAsync(userId) ?? throw new KeyNotFoundException("User not found.");
         if (!organizer.FaydaVerified) throw new UnauthorizedAccessException("Only verified users can create a circle.");
@@ -22,7 +26,7 @@ public class CircleService(IApplicationDbContext db) : ICircleService
         {
             Name = request.Name.Trim(),
             ContributionAmount = request.ContributionAmount,
-            Frequency = Enum.Parse<Frequency>(request.Frequency, true),
+            Frequency = frequency,
             MemberLimit = request.MemberLimit,
             OrganizerId = userId,
             StartDate = request.StartDate.HasValue
@@ -166,10 +170,12 @@ public class CircleService(IApplicationDbContext db) : ICircleService
         if (members.Count != circle.MemberLimit)
             throw new InvalidOperationException($"The circle must have all {circle.MemberLimit} members before it can start. Currently {members.Count} member(s) have joined.");
 
-        await using var transaction = await db.Database.BeginTransactionAsync();
         for (var i = 0; i < members.Count; i++) members[i].PayoutOrder = i + 1;
+
+        await using var transaction = await db.Database.BeginTransactionAsync();
+        var startedAt = DateTime.UtcNow;
         circle.Status = CircleStatus.Active;
-        circle.StartDate ??= DateTime.UtcNow;
+        circle.StartDate ??= startedAt;
 
         for (var i = 0; i < members.Count; i++)
         {
@@ -179,7 +185,7 @@ public class CircleService(IApplicationDbContext db) : ICircleService
                 RoundNumber = i + 1,
                 ReceiverMembershipId = members[i].Id,
                 Status = RoundStatus.Open,
-                OpenedAt = i == 0 ? DateTime.UtcNow : circle.StartDate.Value
+                OpenedAt = startedAt
             });
         }
 

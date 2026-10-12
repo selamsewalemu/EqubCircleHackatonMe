@@ -105,7 +105,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
   Widget build(BuildContext context) {
     final user = context.watch<AuthService>().currentUser;
     final firstName = user?.fullName.split(' ').first ?? 'there';
-    final activeCount = _myCircles.where((c) => c.status.toLowerCase() == 'active').length;
 
     return Scaffold(
       appBar: AppBar(
@@ -244,9 +243,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
                               children: [
                                 _buildStatItem('My Circles', '${_myCircles.length}'),
                                 Container(height: 24, width: 1, color: Colors.white24),
-                                _buildStatItem('Open to Join', '${_availableCircles.length}'),
+                                _buildStatItem('Contributions', '${currencyFormat.format(_summary?.totalContributions ?? 0)} ETB'),
                                 Container(height: 24, width: 1, color: Colors.white24),
-                                _buildStatItem('Active', '$activeCount'),
+                                _buildStatItem('Payouts', '${currencyFormat.format(_summary?.totalPayoutsReceived ?? 0)} ETB'),
                               ],
                             ),
                           ),

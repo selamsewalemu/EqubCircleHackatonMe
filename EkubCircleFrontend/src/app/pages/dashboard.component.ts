@@ -10,7 +10,7 @@ import { CircleSummary } from '../models';
 @Component({ selector: 'app-dashboard', standalone: true, imports: [CommonModule, FormsModule, RouterLink], template: `
 <section class="page">
   <div class="hero-row"><div><div class="eyebrow">YOUR EKUB</div><h1>Good to see you, {{firstName}}.</h1><p class="muted">Track every contribution and payout with confidence.</p></div><a routerLink="/circles/new" class="btn primary">+ Create circle</a></div>
-  <div class="stats"><div><span>My circles</span><strong>{{mine.length}}</strong></div><div><span>Open to join</span><strong>{{available.length}}</strong></div><div><span>Active</span><strong>{{activeCount}}</strong></div></div>
+  <div class="stats"><div><span>My circles</span><strong>{{mine.length}}</strong></div><div><span>Total contributions</span><strong>{{(summary?.totalContributions ?? 0) | number:'1.0-2'}} ETB</strong></div><div><span>Total payouts received</span><strong>{{(summary?.totalPayoutsReceived ?? 0) | number:'1.0-2'}} ETB</strong></div></div>
   <div class="next-grid">
     <a class="next-card" *ngIf="summary?.nextPaymentCircle as p; else noPayment" [routerLink]="['/circles', p.circleId]"><div class="eyebrow">NEXT PAYMENT CIRCLE</div><h3>{{p.circleName}}</h3><strong>{{p.contributionAmount | number:'1.0-2'}} ETB</strong><p>Round {{p.roundNumber}} · {{p.frequency}}</p><span class="next-status">{{p.message}}</span></a>
     <ng-template #noPayment><div class="next-card muted-card"><div class="eyebrow">NEXT PAYMENT CIRCLE</div><h3>No payment due</h3><p>You are up to date on your active circles.</p></div></ng-template>
