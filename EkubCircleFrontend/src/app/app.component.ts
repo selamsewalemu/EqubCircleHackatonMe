@@ -1,6 +1,6 @@
 import { Component, inject } from '@angular/core';
 import { Router, RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
-import { CommonModule } from '@angular/common';
+import { AsyncPipe, CommonModule } from '@angular/common';
 import { AuthService } from './auth.service';
 import { RealtimeService } from './realtime.service';
 
@@ -17,7 +17,7 @@ interface ToastItem { message: string; type: 'success' | 'error' | 'info'; id: n
 @Component({
   selector: 'app-root',
   standalone: true,
-  imports: [RouterOutlet, RouterLink, RouterLinkActive, CommonModule],
+  imports: [RouterOutlet, RouterLink, RouterLinkActive, CommonModule, AsyncPipe],
   template: `
     <div class="app-shell">
       <!-- Top navigation bar -->
@@ -34,6 +34,8 @@ interface ToastItem { message: string; type: 'success' | 'error' | 'info'; id: n
             {{ auth.user()?.fullName }} · Logout
           </button>
         </nav>
+        <span class="rt-dot" [class.rt-connected]="(realtime.isConnected$ | async)"
+              [title]="(realtime.isConnected$ | async) ? 'Live updates connected' : 'Connecting…'"></span>
       </header>
 
       <!-- Toast notifications -->
@@ -62,7 +64,7 @@ interface ToastItem { message: string; type: 'success' | 'error' | 'info'; id: n
 export class AppComponent {
   auth = inject(AuthService);
   private router = inject(Router);
-  private realtime = inject(RealtimeService);
+  realtime = inject(RealtimeService);
 
   notifications: ToastItem[] = [];
   private nextId = 0;

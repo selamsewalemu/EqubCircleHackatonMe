@@ -1201,3 +1201,20 @@ th {
 /* ── Auth art features ────────────────────────────────────────────────────── */
 .art-features { margin-top: 32px; display:flex; flex-direction:column; gap:10px; }
 .art-feature { display:flex; align-items:center; gap:10px; font-size:15px; opacity:0.85; }
+
+/* SignalR connection indicator */
+.rt-dot {
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #9ca3af;
+  margin-left: 10px;
+  flex-shrink: 0;
+  transition: background 0.4s;
+  align-self: center;
+}
+.rt-dot.rt-connected {
+  background: #22c55e;
+  box-shadow: 0 0 6px rgba(34, 197, 94, 0.5);
+}

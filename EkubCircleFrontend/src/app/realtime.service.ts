@@ -1,39 +1,79 @@
-import { Injectable, inject } from '@angular/core';
+import { Injectable } from '@angular/core';
 import { HubConnection, HubConnectionBuilder, LogLevel } from '@microsoft/signalr';
-import { Subject } from 'rxjs';
+import { BehaviorSubject, Subject } from 'rxjs';
 
-const API_BASE = 'http://localhost:5000';
+export interface RealtimeEvent {
+  type: string;
+  data?: unknown;
+}
 
-export interface RealtimeEvent { type: string; data?: any; }
+const HUB_EVENTS = [
+  'circleCreated',
+  'memberJoined',
+  'circleStarted',
+  'paymentRecorded',
+  'payoutCompleted',
+] as const;
 
 @Injectable({ providedIn: 'root' })
 export class RealtimeService {
   private connection: HubConnection | null = null;
+  private startedForToken = '';
+
   private eventsSubject = new Subject<RealtimeEvent>();
   readonly events$ = this.eventsSubject.asObservable();
-  private startedForToken = '';
+
+  private isConnectedSubject = new BehaviorSubject<boolean>(false);
+  readonly isConnected$ = this.isConnectedSubject.asObservable();
 
   connect(): void {
     const token = localStorage.getItem('ekub_token');
     if (!token || this.startedForToken === token) return;
     this.startedForToken = token;
+
     this.connection = new HubConnectionBuilder()
-      .withUrl(`${API_BASE}/hubs/notifications`, { accessTokenFactory: () => localStorage.getItem('ekub_token') || '' })
+      .withUrl('/hubs/notifications', {
+        accessTokenFactory: () => localStorage.getItem('ekub_token') ?? '',
+      })
       .withAutomaticReconnect()
       .configureLogging(LogLevel.Warning)
       .build();
 
-    ['circleCreated','memberJoined','circleStarted','paymentRecorded','payoutCompleted'].forEach(type => {
-      this.connection!.on(type, (data: any) => this.eventsSubject.next({ type, data }));
+    for (const type of HUB_EVENTS) {
+      this.connection.on(type, (data: unknown) =>
+        this.eventsSubject.next({ type, data }),
+      );
+    }
+
+    this.connection.onclose(() => {
+      this.startedForToken = '';
+      this.isConnectedSubject.next(false);
     });
-    this.connection.onclose(() => { this.startedForToken = ''; });
-    this.connection.start().catch(() => { this.startedForToken = ''; });
+
+    this.connection.onreconnecting(() => {
+      this.isConnectedSubject.next(false);
+    });
+
+    this.connection.onreconnected(() => {
+      this.isConnectedSubject.next(true);
+    });
+
+    this.connection
+      .start()
+      .then(() => this.isConnectedSubject.next(true))
+      .catch(() => {
+        this.startedForToken = '';
+        this.isConnectedSubject.next(false);
+      });
   }
 
   disconnect(): void {
     const connection = this.connection;
     this.connection = null;
     this.startedForToken = '';
-    if (connection) connection.stop().catch(() => {});
+    this.isConnectedSubject.next(false);
+    if (connection) {
+      connection.stop().catch(() => {});
+    }
   }
 }
