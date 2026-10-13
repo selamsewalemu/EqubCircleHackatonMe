@@ -1197,3 +1197,7 @@ th {
     display: none;
   }
 }
+
+/* ── Auth art features ────────────────────────────────────────────────────── */
+.art-features { margin-top: 32px; display:flex; flex-direction:column; gap:10px; }
+.art-feature { display:flex; align-items:center; gap:10px; font-size:15px; opacity:0.85; }
