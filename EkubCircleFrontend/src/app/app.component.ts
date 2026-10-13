@@ -92,7 +92,7 @@ export class AppComponent {
 
   private showNotification(type: string): void {
     const message = REALTIME_MESSAGES[type] ?? 'EkubCircle updated.';
-    this.notifications = [{ message, type: 'success', id: this.nextId++ }, ...this.notifications].slice(0, 4);
+    this.notifications = [{ message, type: 'success' as const, id: this.nextId++ }, ...this.notifications].slice(0, 4);
     setTimeout(() => this.notifications.pop(), 5000);
   }
 }
