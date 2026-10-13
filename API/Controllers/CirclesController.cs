@@ -22,12 +22,12 @@ public class CirclesController(ICircleService circleService, IHubContext<Notific
     }
 
     [HttpGet("available")]
-    public async Task<ActionResult<IReadOnlyList<CircleSummaryDto>>> Available([FromQuery] string? search, [FromQuery] string? frequency) =>
-        Ok(await circleService.GetAvailableAsync(User.GetUserId(), search, frequency));
+    public async Task<ActionResult<List<CircleSummaryDto>>> Available([FromQuery] string? search, [FromQuery] string? frequency) =>
+        Ok((await circleService.GetAvailableAsync(User.GetUserId(), search, frequency)).ToList());
 
     [HttpGet("mine")]
-    public async Task<ActionResult<IReadOnlyList<CircleSummaryDto>>> Mine() =>
-        Ok(await circleService.GetMyCirclesAsync(User.GetUserId()));
+    public async Task<ActionResult<List<CircleSummaryDto>>> Mine() =>
+        Ok((await circleService.GetMyCirclesAsync(User.GetUserId())).ToList());
 
     [HttpGet("{id:int}")]
     public async Task<ActionResult<CircleDetailsDto>> GetDetails(int id) =>
@@ -50,9 +50,9 @@ public class CirclesController(ICircleService circleService, IHubContext<Notific
     }
 
     [HttpPost("{id:int}/start")]
-    public async Task<IActionResult> Start(int id)
+    public async Task<IActionResult> Start(int id, [FromBody] StartRequest? request = null)
     {
-        await circleService.StartAsync(User.GetUserId(), id);
+        await circleService.StartAsync(User.GetUserId(), id, request);
         await hub.Clients.All.SendAsync("circleStarted", new { circleId = id });
         return Ok(new { message = "Circle started. Membership and payout order are now locked." });
     }

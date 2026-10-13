@@ -9,6 +9,6 @@ public interface ICircleService
     Task<CircleDetailsDto> GetDetailsAsync(int circleId, int? requestingUserId = null);
     Task JoinAsync(int userId, int circleId);
     Task AddMemberAsync(int organizerId, int circleId, AddMemberRequest request);
-    Task StartAsync(int organizerId, int circleId);
+    Task StartAsync(int organizerId, int circleId, StartRequest? request = null);
     Task<IReadOnlyList<CircleSummaryDto>> GetMyCirclesAsync(int userId);
 }

@@ -5,7 +5,7 @@ import { ActivatedRoute, RouterLink } from '@angular/router';
 import { ApiService } from '../api.service';
 import { AuthService } from '../auth.service';
 import { RealtimeService } from '../realtime.service';
-import { CircleDetails, CircleMember, HistoryItem, Round } from '../models';
+import { CircleDetails, CircleMember, HistoryItem, MemberPayoutOrder, Round } from '../models';
 
 const RELOAD_EVENTS = [
   'memberJoined',
@@ -161,34 +161,57 @@ const RELOAD_EVENTS = [
               </div>
             </div>
 
+            <!-- Add member row -->
             <div class="add-row">
-              <input
-                [(ngModel)]="memberIdentifier"
-                placeholder="Member email or phone"
-              />
+              <input [(ngModel)]="memberIdentifier" placeholder="Member email or phone" />
               <button class="btn" (click)="addMember()">Add member</button>
             </div>
 
-            <div class="action-row">
-              <button
-                class="btn primary"
-                (click)="start()"
-                [disabled]="c.members.length < c.memberLimit || actionLoading"
-              >
-                <span *ngIf="actionLoading" class="loading-spinner"></span>
-                {{actionLoading ? 'Starting…' : 'Start circle & lock order'}}
-              </button>
+            <!-- Roll payout order section -->
+            <div class="roll-section" *ngIf="c.members.length === c.memberLimit">
+              <div class="roll-header">
+                <span class="eyebrow">STEP 2 — DRAW PAYOUT ORDER</span>
+                <p class="muted">
+                  Toss the members to randomly assign who receives in which round.
+                  Roll as many times as you like, then confirm to lock the order.
+                </p>
+              </div>
+
+              <!-- Roll result table -->
+              <div class="roll-result" *ngIf="rolledOrder.length">
+                <div class="roll-row" *ngFor="let entry of rolledOrder">
+                  <div class="roll-number">{{ entry.order }}</div>
+                  <div class="avatar avatar-sm" [ngClass]="avatarClass(entry.name)">
+                    {{ initials(entry.name) }}
+                  </div>
+                  <span class="roll-name">{{ entry.name }}</span>
+                  <span class="roll-label">receives round {{ entry.order }}</span>
+                </div>
+              </div>
+
+              <div class="action-row">
+                <button class="btn ghost" (click)="rollOrder(c.members)" [disabled]="actionLoading">
+                  🎲 {{ rolledOrder.length ? 'Re-roll' : 'Roll payout order' }}
+                </button>
+                <button
+                  class="btn primary"
+                  (click)="start()"
+                  [disabled]="!rolledOrder.length || actionLoading"
+                >
+                  <span *ngIf="actionLoading" class="loading-spinner"></span>
+                  {{ actionLoading ? 'Starting…' : 'Confirm & start circle' }}
+                </button>
+              </div>
+              <div class="hint">
+                The rolled order is final once you confirm. Every member will see it.
+              </div>
             </div>
 
-            <div class="hint" *ngIf="c.members.length < c.memberLimit">
-              {{ c.memberLimit - c.members.length }} member(s) still need to join
-              before the circle can start.
-            </div>
-            <div class="hint" *ngIf="c.members.length === c.memberLimit">
-              All {{ c.memberLimit }} members have joined. The circle is ready to start.
-            </div>
-            <div class="hint">
-              Starting assigns a fixed payout order and creates one round per member.
+            <!-- Waiting for members -->
+            <div *ngIf="c.members.length < c.memberLimit">
+              <div class="hint" style="margin-top:14px">
+                {{ c.memberLimit - c.members.length }} more member(s) needed before you can roll.
+              </div>
             </div>
           </div>
 
@@ -199,12 +222,74 @@ const RELOAD_EVENTS = [
             <button class="btn primary" (click)="join()">Join this circle</button>
           </div>
 
+          <!-- Payout schedule (Active circles) -->
+          <div class="panel" *ngIf="allRounds.length">
+            <div class="panel-head">
+              <div>
+                <span class="eyebrow">PAYOUT SCHEDULE</span>
+                <h2>Who receives each round</h2>
+              </div>
+            </div>
+            <div class="table-wrap">
+              <table>
+                <thead>
+                  <tr>
+                    <th>#</th>
+                    <th>Receiver</th>
+                    <th>Amount</th>
+                    <th>Date paid out</th>
+                    <th>Status</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr
+                    *ngFor="let r of allRounds"
+                    [class.current-round-row]="round && r.roundNumber === round.roundNumber"
+                  >
+                    <td>
+                      <strong>Round {{ r.roundNumber }}</strong>
+                      <span
+                        *ngIf="round && r.roundNumber === round.roundNumber"
+                        class="current-badge"
+                      >Current</span>
+                    </td>
+                    <td>
+                      <div class="receiver-cell">
+                        <div class="avatar avatar-sm" [ngClass]="avatarClass(r.receiverName)">
+                          {{ initials(r.receiverName) }}
+                        </div>
+                        {{ r.receiverName }}
+                      </div>
+                    </td>
+                    <td>
+                      <span *ngIf="r.payoutAmount">
+                        {{ r.payoutAmount | number: '1.0-2' }} ETB
+                      </span>
+                      <span *ngIf="!r.payoutAmount" class="muted">
+                        {{ c.contributionAmount * c.members.length | number: '1.0-2' }} ETB
+                      </span>
+                    </td>
+                    <td>
+                      <span *ngIf="r.paidOutAt">{{ r.paidOutAt | date: 'mediumDate' }}</span>
+                      <span *ngIf="!r.paidOutAt" class="muted">—</span>
+                    </td>
+                    <td>
+                      <span class="status" [class.active]="r.status === 'PaidOut'">
+                        {{ r.status === 'PaidOut' ? 'Paid out' : r.status === 'Open' ? 'Pending' : r.status }}
+                      </span>
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+
           <!-- Round history table -->
           <div class="panel">
             <div class="panel-head">
               <div>
                 <span class="eyebrow">HISTORY</span>
-                <h2>Round history</h2>
+                <h2>Completed rounds</h2>
               </div>
             </div>
             <div class="table-wrap">
@@ -214,7 +299,7 @@ const RELOAD_EVENTS = [
                     <th>Round</th>
                     <th>Receiver</th>
                     <th>Pot</th>
-                    <th>Status</th>
+                    <th>Date</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -223,9 +308,8 @@ const RELOAD_EVENTS = [
                     <td>{{ h.receiverName }}</td>
                     <td>{{ h.pot | number: '1.0-2' }} ETB</td>
                     <td>
-                      <span class="status" [class.active]="h.status === 'PaidOut'">
-                        {{ h.status }}
-                      </span>
+                      <span *ngIf="h.paidOutAt">{{ h.paidOutAt | date: 'mediumDate' }}</span>
+                      <span *ngIf="!h.paidOutAt" class="muted">—</span>
                     </td>
                   </tr>
                 </tbody>
@@ -300,6 +384,7 @@ export class CircleComponent {
   circle: CircleDetails | null = null;
   round: Round | null = null;
   history: HistoryItem[] = [];
+  allRounds: Round[] = [];
 
   error = '';
   memberIdentifier = '';
@@ -307,6 +392,9 @@ export class CircleComponent {
   payoutLoading = false;
   paymentLoading = false;
   isLoading = true;
+
+  // Roll state: each entry holds membershipId, display name, and drawn order
+  rolledOrder: { membershipId: number; name: string; order: number }[] = [];
 
   get isOrganizer(): boolean {
     return (
@@ -349,6 +437,14 @@ export class CircleComponent {
           next: h => (this.history = h),
           error: () => {},
         });
+        if (c.status === 'Active' || c.status === 'Completed') {
+          this.api.rounds(id).subscribe({
+            next: r => (this.allRounds = r),
+            error: () => (this.allRounds = []),
+          });
+        } else {
+          this.allRounds = [];
+        }
         if (c.status === 'Active') {
           this.api.currentRound(id).subscribe({
             next: r => (this.round = r),
@@ -362,12 +458,36 @@ export class CircleComponent {
     });
   }
 
+  /** Randomly shuffle members and preview the payout order — does NOT call the API yet. */
+  rollOrder(members: CircleMember[]): void {
+    const shuffled = [...members];
+    // Fisher-Yates shuffle
+    for (let i = shuffled.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+    }
+    this.rolledOrder = shuffled.map((m, idx) => ({
+      membershipId: m.membershipId,
+      name: m.fullName,
+      order: idx + 1,
+    }));
+  }
+
+  /** Send the rolled order to the API and start the circle. */
   start(): void {
     if (!this.circle) return;
     this.actionLoading = true;
-    this.api.start(this.circle.id).subscribe({
+    this.error = '';
+
+    const payoutOrder: MemberPayoutOrder[] = this.rolledOrder.map(e => ({
+      membershipId: e.membershipId,
+      order: e.order,
+    }));
+
+    this.api.start(this.circle.id, { payoutOrder }).subscribe({
       next: () => {
         this.actionLoading = false;
+        this.rolledOrder = [];
         this.load(this.circle!.id);
       },
       error: e => {

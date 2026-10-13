@@ -156,7 +156,7 @@ public class CircleService(IApplicationDbContext db) : ICircleService
         await db.SaveChangesAsync();
     }
 
-    public async Task StartAsync(int organizerId, int circleId)
+    public async Task StartAsync(int organizerId, int circleId, StartRequest? request = null)
     {
         var circle = await db.Circles.Include(c => c.Memberships)
             .FirstOrDefaultAsync(c => c.Id == circleId)
@@ -165,25 +165,60 @@ public class CircleService(IApplicationDbContext db) : ICircleService
         if (circle.OrganizerId != organizerId) throw new UnauthorizedAccessException("Only the organizer can start the circle.");
         if (circle.Status != CircleStatus.Open) throw new InvalidOperationException("Only an open circle can be started.");
 
-        var members = circle.Memberships.Where(m => m.MembershipStatus == MembershipStatus.Active)
-            .OrderBy(m => m.JoinedAt).ThenBy(m => m.Id).ToList();
+        var members = circle.Memberships
+            .Where(m => m.MembershipStatus == MembershipStatus.Active)
+            .ToList();
+
         if (members.Count != circle.MemberLimit)
             throw new InvalidOperationException($"The circle must have all {circle.MemberLimit} members before it can start. Currently {members.Count} member(s) have joined.");
 
-        for (var i = 0; i < members.Count; i++) members[i].PayoutOrder = i + 1;
+        // Apply submitted payout order if the organizer rolled it in the UI
+        var submittedOrder = request?.PayoutOrder;
+        if (submittedOrder != null && submittedOrder.Count > 0)
+        {
+            // Validate: must cover exactly the active membership IDs with orders 1..N
+            var memberIds = members.Select(m => m.Id).ToHashSet();
+            var submittedIds = submittedOrder.Select(x => x.MembershipId).ToHashSet();
+            var orders = submittedOrder.Select(x => x.Order).OrderBy(x => x).ToList();
+            var expectedOrders = Enumerable.Range(1, members.Count).ToList();
+
+            if (!submittedIds.SetEquals(memberIds) || !orders.SequenceEqual(expectedOrders))
+                throw new InvalidOperationException("Submitted payout order is invalid. Ensure every member appears exactly once with orders 1 through " + members.Count + ".");
+
+            foreach (var m in members)
+            {
+                var entry = submittedOrder.First(x => x.MembershipId == m.Id);
+                m.PayoutOrder = entry.Order;
+            }
+        }
+        else
+        {
+            // Fallback: server-side random draw
+            var rng = Random.Shared;
+            var shuffled = members.ToList();
+            for (int i = shuffled.Count - 1; i > 0; i--)
+            {
+                int j = rng.Next(i + 1);
+                (shuffled[i], shuffled[j]) = (shuffled[j], shuffled[i]);
+            }
+            for (var i = 0; i < shuffled.Count; i++)
+                shuffled[i].PayoutOrder = i + 1;
+        }
 
         await using var transaction = await db.Database.BeginTransactionAsync();
         var startedAt = DateTime.UtcNow;
         circle.Status = CircleStatus.Active;
         circle.StartDate ??= startedAt;
 
-        for (var i = 0; i < members.Count; i++)
+        // Create rounds in payout order
+        var orderedMembers = members.OrderBy(m => m.PayoutOrder).ToList();
+        for (var i = 0; i < orderedMembers.Count; i++)
         {
             db.Rounds.Add(new Round
             {
                 CircleId = circle.Id,
                 RoundNumber = i + 1,
-                ReceiverMembershipId = members[i].Id,
+                ReceiverMembershipId = orderedMembers[i].Id,
                 Status = RoundStatus.Open,
                 OpenedAt = startedAt
             });

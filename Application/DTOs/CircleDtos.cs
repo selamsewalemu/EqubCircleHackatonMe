@@ -10,6 +10,10 @@ public record CreateCircleRequest(
 public record JoinCircleRequest(int CircleId);
 public record AddMemberRequest(string EmailOrPhone);
 
+// membershipId → payoutOrder mapping submitted by the organizer after rolling
+public record StartRequest(List<MemberPayoutOrder>? PayoutOrder);
+public record MemberPayoutOrder(int MembershipId, int Order);
+
 public record CircleSummaryDto(
     int Id,
     string Name,
