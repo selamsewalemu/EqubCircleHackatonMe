@@ -4,13 +4,15 @@ import 'screens/login_screen.dart';
 import 'screens/main_navigation_screen.dart';
 import 'services/api_service.dart';
 import 'services/auth_service.dart';
+import 'services/realtime_service.dart';
 import 'theme/app_theme.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
   final apiService = ApiService();
-  final authService = AuthService(apiService);
+  final realtimeService = RealtimeService();
+  final authService = AuthService(apiService, realtimeService);
 
   await authService.init();
 
@@ -19,6 +21,7 @@ void main() async {
       providers: [
         Provider<ApiService>.value(value: apiService),
         ChangeNotifierProvider<AuthService>.value(value: authService),
+        ChangeNotifierProvider<RealtimeService>.value(value: realtimeService),
       ],
       child: const EkubCircleApp(),
     ),

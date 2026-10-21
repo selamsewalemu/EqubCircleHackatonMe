@@ -3,6 +3,7 @@ import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../models/models.dart';
 import 'api_service.dart';
+import 'realtime_service.dart';
 
 class AuthService extends ChangeNotifier {
   static const String _userKey = 'ekub_auth_user';
@@ -11,12 +12,13 @@ class AuthService extends ChangeNotifier {
   static const String _demoOtpKey = 'ekub_demo_otp';
 
   final ApiService _apiService;
+  final RealtimeService _realtimeService;
   AuthResponse? _currentUser;
   bool _isLoading = true;
   String? _pendingDemoOtp;
   int? _pendingUserId;
 
-  AuthService(this._apiService);
+  AuthService(this._apiService, this._realtimeService);
 
   AuthResponse? get currentUser => _currentUser;
   bool get isAuthenticated => _currentUser != null;
@@ -40,6 +42,7 @@ class AuthService extends ChangeNotifier {
         final map = jsonDecode(userJson);
         _currentUser = AuthResponse.fromJson(map);
         _apiService.setToken(token);
+        _realtimeService.connect(token, _apiService.baseUrl);
       }
     } catch (e) {
       if (kDebugMode) {
@@ -109,6 +112,8 @@ class AuthService extends ChangeNotifier {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setString(_tokenKey, response.token);
     await prefs.setString(_userKey, jsonEncode(response.toJson()));
+    // Connect SignalR hub after session is persisted
+    _realtimeService.connect(response.token, _apiService.baseUrl);
   }
 
   Future<void> logout() async {
@@ -120,6 +125,7 @@ class AuthService extends ChangeNotifier {
     await prefs.remove(_userKey);
 
     notifyListeners();
+    await _realtimeService.disconnect();
   }
 }
 

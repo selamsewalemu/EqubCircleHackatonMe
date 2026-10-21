@@ -18,12 +18,12 @@ public class RoundsController(IRoundService roundService, IHubContext<Notificati
         Ok(await roundService.GetCurrentAsync(User.GetUserId(), circleId));
 
     [HttpGet("circles/{circleId:int}/rounds")]
-    public async Task<ActionResult<IReadOnlyList<RoundDto>>> Rounds(int circleId) =>
-        Ok(await roundService.GetRoundsAsync(User.GetUserId(), circleId));
+    public async Task<ActionResult<List<RoundDto>>> Rounds(int circleId) =>
+        Ok((await roundService.GetRoundsAsync(User.GetUserId(), circleId)).ToList());
 
     [HttpGet("circles/{circleId:int}/history")]
-    public async Task<ActionResult<IReadOnlyList<HistoryItemDto>>> History(int circleId) =>
-        Ok(await roundService.GetHistoryAsync(User.GetUserId(), circleId));
+    public async Task<ActionResult<List<HistoryItemDto>>> History(int circleId) =>
+        Ok((await roundService.GetHistoryAsync(User.GetUserId(), circleId)).ToList());
 
     [HttpPost("rounds/{roundId:int}/payments/{membershipId:int}")]
     public async Task<IActionResult> MarkPayment(int roundId, int membershipId, MarkPaymentRequest request)

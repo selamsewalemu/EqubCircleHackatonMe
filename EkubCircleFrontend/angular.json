@@ -38,6 +38,9 @@
         },
         "serve": {
           "builder": "@angular-devkit/build-angular:dev-server",
+          "options": {
+            "proxyConfig": "proxy.conf.json"
+          },
           "configurations": {
             "production": { "buildTarget": "ekub-circle-frontend:build:production" },
             "development": { "buildTarget": "ekub-circle-frontend:build:development" }

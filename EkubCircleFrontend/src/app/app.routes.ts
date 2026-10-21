@@ -17,5 +17,5 @@ export const routes: Routes = [
   { path: 'circles/new', component: CreateCircleComponent, canActivate: [authGuard] },
   { path: 'circles/:id', component: CircleComponent, canActivate: [authGuard] },
   { path: 'profile', component: ProfileComponent, canActivate: [authGuard] },
-  { path: '**', redirectTo: 'dashboard' }
+  { path: '**', redirectTo: 'dashboard' },
 ];

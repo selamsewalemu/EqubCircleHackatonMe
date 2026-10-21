@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 import '../models/models.dart';
 import '../services/api_service.dart';
 import '../services/auth_service.dart';
+import '../services/realtime_service.dart';
 import '../theme/app_theme.dart';
 import '../widgets/common_widgets.dart';
 import 'circle_details_screen.dart';
@@ -27,15 +28,20 @@ class _DashboardScreenState extends State<DashboardScreen> {
   int? _joiningCircleId;
 
   final TextEditingController _searchController = TextEditingController();
+  StreamSubscription<RealtimeEvent>? _realtimeSub;
 
   @override
   void initState() {
     super.initState();
     _loadData();
+    _realtimeSub = context.read<RealtimeService>().events.listen((_) {
+      _loadData();
+    });
   }
 
   @override
   void dispose() {
+    _realtimeSub?.cancel();
     _searchController.dispose();
     super.dispose();
   }
@@ -123,6 +129,19 @@ class _DashboardScreenState extends State<DashboardScreen> {
           ],
         ),
         actions: [
+          Consumer<RealtimeService>(
+            builder: (context, rt, _) => Padding(
+              padding: const EdgeInsets.only(right: 4),
+              child: Tooltip(
+                message: rt.isConnected ? 'Live updates connected' : 'Connecting…',
+                child: Icon(
+                  Icons.circle,
+                  size: 10,
+                  color: rt.isConnected ? const Color(0xFF22C55E) : const Color(0xFF9CA3AF),
+                ),
+              ),
+            ),
+          ),
           IconButton(
             tooltip: 'Refresh',
             icon: const Icon(Icons.refresh_rounded),

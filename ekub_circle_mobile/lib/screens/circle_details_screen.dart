@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 import '../models/models.dart';
 import '../services/api_service.dart';
 import '../services/auth_service.dart';
+import '../services/realtime_service.dart';
 import '../theme/app_theme.dart';
 import '../widgets/common_widgets.dart';
 
@@ -28,15 +29,25 @@ class _CircleDetailsScreenState extends State<CircleDetailsScreen> {
 
   bool _isActionLoading = false;
   final TextEditingController _addMemberController = TextEditingController();
+  StreamSubscription<RealtimeEvent>? _realtimeSub;
 
   @override
   void initState() {
     super.initState();
     _loadCircleData();
+    _realtimeSub = context.read<RealtimeService>().events.listen((event) {
+      final eventCircleId = (event.data is Map)
+          ? (event.data as Map)['circleId'] as int?
+          : null;
+      if (eventCircleId == null || eventCircleId == widget.circleId) {
+        _loadCircleData();
+      }
+    });
   }
 
   @override
   void dispose() {
+    _realtimeSub?.cancel();
     _addMemberController.dispose();
     super.dispose();
   }
