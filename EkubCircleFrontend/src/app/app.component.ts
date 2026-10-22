@@ -23,19 +23,58 @@ interface ToastItem { message: string; type: 'success' | 'error' | 'info'; id: n
       <!-- Top navigation bar -->
       <header class="topbar" *ngIf="auth.isLoggedIn()">
         <a routerLink="/dashboard" class="brand">
-          <span class="brand-mark">E</span>
-          <span>Ekub<span>Circle</span></span>
+          <span class="brand-mark">
+            <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+              <circle cx="12" cy="12" r="9"/>
+              <path d="M12 7v10M8 12h8"/>
+            </svg>
+          </span>
+          <span class="brand-text">Ekub<span>Circle</span></span>
         </a>
-        <nav>
-          <a routerLink="/dashboard" routerLinkActive="active">Dashboard</a>
-          <a routerLink="/circles/new" routerLinkActive="active">Create Circle</a>
-          <a routerLink="/profile" routerLinkActive="active">Profile</a>
-          <button class="nav-user" (click)="logout()">
-            {{ auth.user()?.fullName }} · Logout
-          </button>
+        <nav class="nav-links">
+          <a routerLink="/dashboard" routerLinkActive="active">
+            <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <rect x="3" y="3" width="7" height="7"></rect>
+              <rect x="14" y="3" width="7" height="7"></rect>
+              <rect x="14" y="14" width="7" height="7"></rect>
+              <rect x="3" y="14" width="7" height="7"></rect>
+            </svg>
+            <span>Dashboard</span>
+          </a>
+          <a routerLink="/circles/new" routerLinkActive="active">
+            <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <circle cx="12" cy="12" r="10"></circle>
+              <line x1="12" y1="8" x2="12" y2="16"></line>
+              <line x1="8" y1="12" x2="16" y2="12"></line>
+            </svg>
+            <span>Create Circle</span>
+          </a>
+          <a routerLink="/profile" routerLinkActive="active">
+            <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
+              <circle cx="12" cy="7" r="4"></circle>
+            </svg>
+            <span>Profile</span>
+          </a>
         </nav>
-        <span class="rt-dot" [class.rt-connected]="(realtime.isConnected$ | async)"
-              [title]="(realtime.isConnected$ | async) ? 'Live updates connected' : 'Connecting…'"></span>
+        <div class="topbar-right">
+          <div class="rt-status-pill" [class.rt-connected]="(realtime.isConnected$ | async)"
+               [title]="(realtime.isConnected$ | async) ? 'Live updates connected' : 'Connecting to network…'">
+            <span class="rt-dot"></span>
+            <span class="rt-text">{{ (realtime.isConnected$ | async) ? 'Live Network' : 'Connecting…' }}</span>
+          </div>
+          <div class="user-pill">
+            <span class="user-avatar" [ngClass]="userAvatarClass">{{ userInitials }}</span>
+            <span class="user-name">{{ auth.user()?.fullName }}</span>
+            <button class="btn-logout" (click)="logout()" title="Sign out">
+              <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path>
+                <polyline points="16 17 21 12 16 7"></polyline>
+                <line x1="21" y1="12" x2="9" y2="12"></line>
+              </svg>
+            </button>
+          </div>
+        </div>
       </header>
 
       <!-- Toast notifications -->
@@ -49,7 +88,7 @@ interface ToastItem { message: string; type: 'success' | 'error' | 'info'; id: n
           (click)="dismiss(i)"
         >
           <span class="toast-icon">{{toastIcon(n.type)}}</span>
-          <span>{{n.message}}</span>
+          <span class="toast-msg">{{n.message}}</span>
           <div class="toast-progress"></div>
         </div>
       </div>
@@ -69,6 +108,20 @@ export class AppComponent {
   notifications: ToastItem[] = [];
   private nextId = 0;
 
+  get userInitials(): string {
+    const name = this.auth.user()?.fullName ?? '';
+    const parts = name.trim().split(/\s+/);
+    if (parts.length >= 2) return (parts[0][0] + parts[1][0]).toUpperCase();
+    return name.slice(0, 2).toUpperCase() || 'U';
+  }
+
+  get userAvatarClass(): string {
+    const name = this.auth.user()?.fullName ?? '';
+    let hash = 0;
+    for (let i = 0; i < name.length; i++) hash = name.charCodeAt(i) + ((hash << 5) - hash);
+    return `avatar-${Math.abs(hash) % 8}`;
+  }
+
   constructor() {
     if (this.auth.isLoggedIn()) {
       this.realtime.connect();
@@ -87,7 +140,7 @@ export class AppComponent {
   }
 
   toastIcon(type: string): string {
-    if (type === 'error') return '✗';
+    if (type === 'error') return '✕';
     if (type === 'info') return 'ℹ';
     return '✓';
   }
